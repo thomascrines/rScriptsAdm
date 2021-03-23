@@ -102,7 +102,7 @@ adm_metadata_columns <- function(database, server, schema, table) {
                 MaximumValue nvarchar(255));
                 INSERT INTO @T1 (ColumnName, DataType)
                 SELECT	COLUMN_NAME,
-                REPLACE(CONCAT(DATA_TYPE, '(', CHARACTER_MAXIMUM_LENGTH, ')', '(', DATETIME_PRECISION, ')'), '()', '')
+                REPLACE(CONCAT(DATA_TYPE, '(', CHARACTER_MAXIMUM_LENGTH, ')'), '()', '')
                 FROM INFORMATION_SCHEMA.COLUMNS
                 WHERE	TABLE_CATALOG = @table_catalog
                 AND TABLE_SCHEMA = @table_schema
@@ -189,11 +189,11 @@ adm_i_r_to_sql_data_type <- function(r_data_type) {
 }
 
 adm_i_create_staging_table <- function(database, server, schema, table, dataframe) {
-
+  
   sql <- paste0("CREATE TABLE [", schema, "].[", table, "_staging_] (", table, "ID INT NOT NULL IDENTITY PRIMARY KEY,")
   
   for (column in seq_len(ncol(dataframe))) {
-  
+    
     column_name <- colnames(dataframe)[column]
     data_type <- adm_i_r_to_sql_data_type(class(dataframe[,column])[1])
     
@@ -327,4 +327,3 @@ adm_upload_dataframe <- function(database, server, schema, table, dataframe) {
   
   DBI::dbDisconnect(connection)
 }
-
