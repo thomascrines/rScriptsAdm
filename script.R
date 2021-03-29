@@ -1,9 +1,10 @@
-server <- "s0196a\\ADM"
-# database <- "EducationSchoolLeavers"
-database <- "WorkspaceU442427"
-schema <- "schoolleaverpublicationdata"
+# Populate with values provided by ADM team
+server <- ""
+database <- ""
+schema <- ""
 
-table_name <- "Leavers_followup_200910"
+# Name you want table to have
+table_name <- ""
 
 # List tables currently in database
 adm_list_tables(database, server)
@@ -11,16 +12,22 @@ adm_list_tables(database, server)
 # View metadata of table in database
 metadata <- adm_metadata_columns(database, server, schema, table_name)
 
-# Import table from database
+# Import entire table from database
 table_from_db <- adm_import_table(database, server, schema, table_name)
 
 # Import selected columns from table in database
-columns <- c('foll_org', 'dest_org', 'urbrur6j', 'urbrur8j')
+columns <- c('ColumnName1', 'ColumnName2') # Populate with existing column names
 table_from_db <- adm_import_table(database, server, schema, table_name, columns)
 
+# Import selected columns from table in database between selected rows
+columns <- c('ColumnName1', 'ColumnName2') # Populate with existing column names
+start_row <- 1 # If NULL will start from beginning of table
+end_row <- 3 # If NULL will end at end of table
+table_from_db <- adm_import_table(database, server, schema, table_name, columns, start_row, end_row)
+
 # Example loop to bring back selected columns from selected tables
-columns <- c('foll_org', 'dest_org', 'urbrur6j', 'urbrur8j')
-tables <- c('Leavers_followup_200910', 'Leavers_followup_201011')
+columns <- c('ColumnName1', 'ColumnName2') # Populate with existing column names
+tables <- c('TableName1', 'TableName2') # Populate with existing table names
 
 for (table in tables) {
   
