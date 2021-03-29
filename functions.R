@@ -327,3 +327,46 @@ adm_upload_dataframe <- function(database, server, schema, table, dataframe) {
   
   DBI::dbDisconnect(connection)
 }
+
+adm_i_select_list <- function(columns) {
+  
+  select_list <- ""
+  
+  if (is.null(columns)) {
+    
+    select_list <- "*"
+    
+  } else {
+    
+    for (column in columns) {
+      
+      select_list <- paste0(select_list, "[", column, "], ")
+    }
+    select_list <- substr(select_list, 1, nchar(select_list) - 2)
+  }
+  
+  select_list
+}
+
+adm_i_where_clause <- function(id_column, start_row, end_row) {
+  
+  dplyr::case_when(
+    is.null(start_row) & is.null(end_row) ~ "",
+    is.null(start_row) & !is.null(end_row) ~ paste0(" WHERE [", id_column, "] <= ", end_row),
+    !is.null(start_row) & is.null(end_row) ~ paste0(" WHERE [", id_column, "] >= ", start_row),
+    !is.null(start_row) & !is.null(end_row) ~ paste0(" WHERE [", id_column, "] BETWEEN ", start_row, " AND ", end_row)
+  )
+}
+
+adm_get_dataset <- function(database, server, schema, table, columns = NULL, start_row = NULL, end_row = NULL) {
+ 
+  id_column <- paste0(table, "ID") 
+  select_list <- adm_i_select_list(columns)
+  where_clause <- adm_i_where_clause(id_column = id_column, start_row = start_row, end_row = end_row)
+
+  sql <- paste0("SELECT ", select_list,
+  " FROM [", schema, "].[", table, "]", where_clause, ";")
+  
+  adm_i_execute_sql(database = database, server = server, sql = sql, output = TRUE) 
+}
+  
