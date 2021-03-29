@@ -55,31 +55,6 @@ adm_list_tables <- function(database, server) {
   data
 }
 
-adm_import_table <- function(database, server, schema, table, columns = NULL) {
-  
-  column_list = ""
-  
-  if (is.null(columns)) {
-    
-    column_list = "*"
-    
-  } else {
-    
-    column_list <- "["
-    
-    for (column in columns) {
-      
-      column_list <- paste0(column_list, column, "], [")
-    }
-    
-    column_list <- substr(column_list, 1, nchar(column_list) - 3)
-  }
-  
-  sql <- paste0("SELECT ", column_list, " FROM [", schema, "].[", table, "];")
-  
-  adm_i_execute_sql(database = database, server = server, sql = sql, output = TRUE)
-}
-
 adm_metadata_columns <- function(database, server, schema, table) {
   
   sql <- paste0("SET NOCOUNT ON;
@@ -358,7 +333,7 @@ adm_i_where_clause <- function(id_column, start_row, end_row) {
   )
 }
 
-adm_get_dataset <- function(database, server, schema, table, columns = NULL, start_row = NULL, end_row = NULL) {
+adm_import_table <- function(database, server, schema, table, columns = NULL, start_row = NULL, end_row = NULL) {
  
   id_column <- paste0(table, "ID") 
   select_list <- adm_i_select_list(columns)
