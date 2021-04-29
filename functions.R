@@ -1,8 +1,7 @@
-# The functions below will be updated when the package is refactored
-# In the meantime, load functions into environment by clicking run to bottom of page.
-# Functions with _i_ in name will be internal functions and shouldn't be run on their own.
+# The functions below will be updated as the package is refactored
+# Functions with _i_ in name will be internal functions and shouldn't be run directly.
 
-adm_i_create_connection <- function(database, server) {
+adm_i_create_db_connection <- function(database, server) {
   
   tryCatch({
     
@@ -23,7 +22,7 @@ adm_i_execute_sql <- function(database, server, sql, output = FALSE) {
   
   output_data <- NULL
   
-  connection <- adm_i_create_connection(database = database, server = server)
+  connection <- adm_i_create_db_connection(database = database, server = server)
   
   if (output == TRUE) {
     
@@ -39,23 +38,19 @@ adm_i_execute_sql <- function(database, server, sql, output = FALSE) {
   output_data
 }
 
-adm_list_tables <- function(database, server) {
+adm_db_tables <- function(database, server) {
   
   sql <- "SELECT SCHEMA_NAME(t.schema_id) AS 'Schema',
-  t.name AS 'Name',
-  CASE
-  WHEN t.temporal_type = 0 THEN 'Staging'
-  WHEN t.temporal_type = 2 THEN 'Version'
-  END AS 'TableType'
+  t.name AS 'Name'
   FROM sys.tables t
-  WHERE t.temporal_type != 1 AND SCHEMA_NAME(t.schema_id) != 'mta'"
+  WHERE t.temporal_type != 1"
   
   data <- adm_i_execute_sql(database = database, server = server, sql = sql, output = TRUE)
   
   data
 }
 
-adm_metadata_columns <- function(database, server, schema, table) {
+adm_db_table_metadata <- function(database, server, schema, table) {
   
   sql <- paste0("SET NOCOUNT ON;
                 DECLARE	@table_catalog nvarchar(128) = '", database, "',
@@ -180,9 +175,28 @@ adm_i_create_staging_table <- function(database, server, schema, table, datafram
   adm_i_execute_sql(database = database, server = server, sql = sql, output = FALSE)
 }
 
-adm_i_create_temporal_table <- function(database, server, schema, table) {
+adm_i_create_table <- function(database, server, schema, table) {
   
-  metadata <- adm_metadata_columns(database = database, server = server, schema = schema, table = paste0(table, "_staging_"))
+  metadata <- adm_db_table_metadata(database = database, server = server, schema = schema, table = paste0(table, "_staging_"))
+  
+  sql <- paste0("CREATE TABLE [", schema, "].[", table, "] (", table, "ID INT NOT NULL IDENTITY PRIMARY KEY,")
+  
+  for (row in seq_len(nrow(metadata))) {
+    
+    column_name <- metadata[row, "ColumnName"]
+    data_type <- metadata[row, "DataType"]
+    
+    sql <- paste0(sql, " [", column_name, "] ", data_type, ", ")
+  }
+  
+  sql <- paste0(substr(sql, 1, nchar(sql) - 2), ");")
+  
+  adm_i_execute_sql(database = database, server = server, sql = sql, output = FALSE)
+}
+
+adm_i_create_versioned_table <- function(database, server, schema, table) {
+  
+  metadata <- adm_db_table_metadata(database = database, server = server, schema = schema, table = paste0(table, "_staging_"))
   
   sql <- paste0("CREATE TABLE [", schema, "].[", table, "] (", table, "ID INT NOT NULL IDENTITY PRIMARY KEY,")
   
@@ -200,7 +214,7 @@ adm_i_create_temporal_table <- function(database, server, schema, table) {
                 "PERIOD FOR SYSTEM_TIME (SysStartTime, SysEndTime)) ",
                 "WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [", schema, "].[", table, "History]));")
   
-  connection <- adm_i_create_connection(database = database, server = server)
+  connection <- adm_i_create_db_connection(database = database, server = server)
   
   DBI::dbGetQuery(connection, sql)
   
@@ -209,9 +223,9 @@ adm_i_create_temporal_table <- function(database, server, schema, table) {
 
 adm_i_populate_staging_table <- function(database, server, schema, table, dataframe, overwrite = TRUE, append = FALSE) {
   
-  connection <- adm_i_create_connection(database = database, server = server)
+  connection <- adm_i_create_db_connection(database = database, server = server)
   
-  tables <- adm_list_tables(database = database, server = server)
+  tables <- adm_db_tables(database = database, server = server)
   
   if (nrow(tables[tables$Schema == schema & tables$Name == paste0(table, "_staging_"), ]) == 0) {
     
@@ -234,9 +248,9 @@ adm_i_populate_staging_table <- function(database, server, schema, table, datafr
   DBI::dbDisconnect(connection)
 }
 
-adm_i_populate_temporal_table <- function(database, server, schema, table) {
+adm_i_populate_table_from_staging <- function(database, server, schema, table) {
   
-  metadata <- adm_metadata_columns(database = database, server = server, schema = schema, table = paste0(table, "_staging_"))
+  metadata <- adm_db_table_metadata(database = database, server = server, schema = schema, table = paste0(table, "_staging_"))
   
   column_string <- ""
   
@@ -258,7 +272,7 @@ adm_i_populate_temporal_table <- function(database, server, schema, table) {
 
 adm_i_delete_staging_table <- function(database, server, schema, table) {
   
-  connection <- adm_i_create_connection(database = database, server = server)
+  connection <- adm_i_create_db_connection(database = database, server = server)
   
   tryCatch({
     
@@ -274,22 +288,22 @@ adm_i_delete_staging_table <- function(database, server, schema, table) {
   message("Staging table: '", table, "' successfully deleted from database: '", database, "' on server '", server, "'")
 }
 
-adm_upload_dataframe <- function(database, server, schema, table, dataframe) {
+adm_write_table_to_db <- function(database, server, schema, table, dataframe) {
   
   adm_i_populate_staging_table(database = database, server = server, schema = schema, table = table, dataframe = dataframe)
   
-  connection <- adm_i_create_connection(database = database, server = server)
+  connection <- adm_i_create_db_connection(database = database, server = server)
   
-  tables <- adm_list_tables(database = database, server = server)
+  tables <- adm_db_tables(database = database, server = server)
   
   if (nrow(tables[tables$Schema == schema & tables$Name == table, ]) == 0) {
     
-    adm_i_create_temporal_table(database = database, server = server, schema = schema, table = table)
+    adm_i_create_table(database = database, server = server, schema = schema, table = table)
   }
   
   tryCatch({
     
-    adm_i_populate_temporal_table(database = database, server = server, schema = schema, table = table)
+    adm_i_populate_table_from_staging(database = database, server = server, schema = schema, table = table)
     
     message(paste0("Dataframe successfully written to: '", table, "'"))
     
@@ -333,7 +347,7 @@ adm_i_where_clause <- function(id_column, start_row, end_row) {
   )
 }
 
-adm_import_table <- function(database, server, schema, table, columns = NULL, start_row = NULL, end_row = NULL) {
+adm_read_table_from_db <- function(database, server, schema, table, columns = NULL, start_row = NULL, end_row = NULL) {
  
   id_column <- paste0(table, "ID") 
   select_list <- adm_i_select_list(columns)
@@ -344,4 +358,10 @@ adm_import_table <- function(database, server, schema, table, columns = NULL, st
   
   adm_i_execute_sql(database = database, server = server, sql = sql, output = TRUE) 
 }
+
+adm_drop_table_from_db <- function(database, server, schema, table) {
   
+  sql <- paste0("DROP TABLE [", schema, "].[", table, "]")
+
+  adm_i_execute_sql(database = database, server = server, sql = sql, output = TRUE)
+}
