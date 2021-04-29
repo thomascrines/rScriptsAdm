@@ -305,7 +305,7 @@ adm_write_table_to_db <- function(database, server, schema, table_name, datafram
     
     adm_i_populate_table_from_staging(database = database, server = server, schema = schema, table = table_name)
     
-    message(paste0("Dataframe successfully written to: '", table, "'"))
+    message(paste0("Dataframe successfully written to: '", table_name, "'"))
     
   }, error = function(cond) {
     
