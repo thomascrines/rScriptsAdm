@@ -50,12 +50,12 @@ adm_db_tables <- function(database, server) {
   data
 }
 
-adm_db_table_metadata <- function(database, server, schema, table) {
+adm_db_table_metadata <- function(database, server, schema, table_name) {
   
   sql <- paste0("SET NOCOUNT ON;
                 DECLARE	@table_catalog nvarchar(128) = '", database, "',
                 @table_schema nvarchar(128) = '", schema, "',
-                @table_name nvarchar(128) = '", table, "';
+                @table_name nvarchar(128) = '", table_name, "';
                 DECLARE @sql_statement nvarchar(2000),
                 @param_definition nvarchar(500),
                 @column_name nvarchar(128),
@@ -347,21 +347,22 @@ adm_i_where_clause <- function(id_column, start_row, end_row) {
   )
 }
 
-adm_read_table_from_db <- function(database, server, schema, table, columns = NULL, start_row = NULL, end_row = NULL) {
- 
-  id_column <- paste0(table, "ID") 
+adm_read_table_from_db <- function(database, server, schema, table_name, columns = NULL) {
+  
+  id_column <- paste0(table_name, "ID") 
   select_list <- adm_i_select_list(columns)
-  where_clause <- adm_i_where_clause(id_column = id_column, start_row = start_row, end_row = end_row)
-
+  
   sql <- paste0("SELECT ", select_list,
-  " FROM [", schema, "].[", table, "]", where_clause, ";")
+                " FROM [", schema, "].[", table_name, "];")
   
   adm_i_execute_sql(database = database, server = server, sql = sql, output = TRUE) 
 }
 
-adm_drop_table_from_db <- function(database, server, schema, table) {
+adm_drop_table_from_db <- function(database, server, schema, table_name) {
   
-  sql <- paste0("DROP TABLE [", schema, "].[", table, "]")
-
+  sql <- paste0("DROP TABLE [", schema, "].[", table_name, "]")
+  
   adm_i_execute_sql(database = database, server = server, sql = sql, output = TRUE)
+  
+  message("Table: '", table_name, "' successfully deleted from database: '", database, "' on server '", server, "'")
 }
