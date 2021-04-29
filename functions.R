@@ -288,22 +288,22 @@ adm_i_delete_staging_table <- function(database, server, schema, table) {
   message("Staging table: '", table, "' successfully deleted from database: '", database, "' on server '", server, "'")
 }
 
-adm_write_table_to_db <- function(database, server, schema, table, dataframe) {
+adm_write_table_to_db <- function(database, server, schema, table_name, dataframe) {
   
-  adm_i_populate_staging_table(database = database, server = server, schema = schema, table = table, dataframe = dataframe)
+  adm_i_populate_staging_table(database = database, server = server, schema = schema, table = table_name, dataframe = dataframe)
   
   connection <- adm_i_create_db_connection(database = database, server = server)
   
   tables <- adm_db_tables(database = database, server = server)
   
-  if (nrow(tables[tables$Schema == schema & tables$Name == table, ]) == 0) {
+  if (nrow(tables[tables$Schema == schema & tables$Name == table_name, ]) == 0) {
     
-    adm_i_create_table(database = database, server = server, schema = schema, table = table)
+    adm_i_create_table(database = database, server = server, schema = schema, table = table_name)
   }
   
   tryCatch({
     
-    adm_i_populate_table_from_staging(database = database, server = server, schema = schema, table = table)
+    adm_i_populate_table_from_staging(database = database, server = server, schema = schema, table = table_name)
     
     message(paste0("Dataframe successfully written to: '", table, "'"))
     
@@ -312,7 +312,7 @@ adm_write_table_to_db <- function(database, server, schema, table, dataframe) {
     stop(paste0("Failed to write dataframe to database: '", database, "'\nOriginal error message: ", cond))
   })
   
-  adm_i_delete_staging_table(database = database, server = server, schema = schema, table = table)
+  adm_i_delete_staging_table(database = database, server = server, schema = schema, table = table_name)
   
   DBI::dbDisconnect(connection)
 }
