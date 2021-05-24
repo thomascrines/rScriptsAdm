@@ -167,7 +167,7 @@ adm_i_create_staging_table <- function(database, server, schema, table, datafram
   for (column_index in seq_len(ncol(dataframe))) {
     
     column_name <- names(columns[column_index])
-    data_type <- adm_i_r_to_sql_data_type(column_types[[column_index]][1])
+    data_type <- adm_i_r_to_sql_data_type(columns[[column_index]][1])
     
     sql <- paste0(sql, " [", column_name, "] ", data_type, ", ")
   }
