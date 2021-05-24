@@ -160,12 +160,14 @@ adm_i_r_to_sql_data_type <- function(r_data_type) {
 
 adm_i_create_staging_table <- function(database, server, schema, table, dataframe) {
   
+  columns <- sapply(dataframe, class)
+  
   sql <- paste0("CREATE TABLE [", schema, "].[", table, "_staging_] (", table, "ID INT NOT NULL IDENTITY PRIMARY KEY,")
   
-  for (column in seq_len(ncol(dataframe))) {
+  for (column_index in seq_len(ncol(dataframe))) {
     
-    column_name <- colnames(dataframe)[column]
-    data_type <- adm_i_r_to_sql_data_type(class(dataframe[,column])[1])
+    column_name <- names(columns[column_index])
+    data_type <- adm_i_r_to_sql_data_type(column_types[[column_index]][1])
     
     sql <- paste0(sql, " [", column_name, "] ", data_type, ", ")
   }
